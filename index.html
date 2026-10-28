@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>戦国武将クイズ 〜石田三成 激闘編〜</title>
+    
+    <!-- PWA / Apple Touch Icon 設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="三成クイズ">
+    <link rel="apple-touch-icon" href="icon.jpg">
+    <link rel="manifest" href="manifest.json">
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #111; color: #fff; overflow: hidden; -webkit-user-select: none; }
+        #app { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        .bg-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transition: opacity 0.3s; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }
+        .container { flex: 1; display: flex; flex-direction: column; padding: 20px; z-index: 1; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .badge { background: #e63946; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .question-area { flex: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .question-text { font-size: 22px; font-weight: bold; line-height: 1.5; text-align: center; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .btn { background: rgba(255, 255, 255, 0.95); color: #222; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn:active { transform: scale(0.98); }
+        .btn.correct { background: #2a9d8f; color: white; border: 2px solid #fff; }
+        .btn.wrong { background: #e63946; color: white; border: 2px solid #fff; }
+        .explanation-card { background: rgba(255, 255, 255, 0.95); color: #333; padding: 15px; border-radius: 12px; margin-top: 10px; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .next-btn { background: #fca311; color: #fff; border: none; padding: 16px; border-radius: 12px; font-size: 18px; font-weight: bold; width: 100%; margin-top: 15px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        /* ホーム画面＆リザルト画面 */
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; }
+        .screen.active { display: flex; }
+        h1 { font-size: 32px; margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        p { font-size: 18px; margin-bottom: 30px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        .start-btn, .share-btn { background: #fca311; color: #fff; border: none; padding: 16px 32px; border-radius: 30px; font-size: 20px; font-weight: bold; cursor: pointer; margin: 10px; width: 80%; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .share-btn { background: #06c755; }
+        .rank-title { font-size: 34px; color: #fca311; margin: 20px 0; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+    <!-- 音声ファイルの読み込み -->
+    <audio id="se_correct" src="correct.mp3" preload="auto"></audio>
+    <audio id="se_wrong" src="wrong.mp3" preload="auto"></audio>
+
+    <div id="app">
+        <!-- 背景画像 -->
+        <img id="bgImage" class="bg-image" src="hazku_idle.jpg" alt="background">
+        <div class="overlay"></div>
+
+        <!-- ホーム画面 -->
+        <div id="homeScreen" class="screen active container">
+            <h1>戦国武将クイズ<br>〜石田三成 激闘編〜</h1>
+            <p>ナビゲーター: ゆるフクロウのHazku</p>
+            <button class="start-btn" onclick="startQuiz()">クイズを始める</button>
+        </div>
+
+        <!-- クイズ画面 -->
+        <div id="quizScreen" class="screen container" style="justify-content: flex-start;">
+            <div class="header">
+                <div id="progress" class="badge">1 / 20</div>
+                <div id="difficultyBadge" class="badge">難易度</div>
+            </div>
+            <div class="question-area">
+                <div id="questionText" class="question-text">問題文</div>
+            </div>
+            <div id="optionsArea" class="options"></div>
+            <div id="explanationArea" class="explanation-card">
+                <strong style="color:#e63946;">解説:</strong>
+                <div id="explanationText" style="margin-top:8px;">解説文</div>
+            </div>
+            <button id="nextBtn" class="next-btn" onclick="nextQuestion()">次の問題へ</button>
+        </div>
+
+        <!-- リザルト画面 -->
+        <div id="resultScreen" class="screen container">
+            <h1>結果発表！</h1>
+            <div class="rank-title" id="finalScore"></div>
+            <p>あなたの称号</p>
+            <div class="rank-title" id="rankName"></div>
+            <p id="rankMessage" style="font-size: 16px;"></p>
+            
+            <button class="share-btn" onclick="shareLINE()">LINEでシェア</button>
+            <button class="start-btn" style="background:#333; border: 1px solid #fff;" onclick="location.reload()">タイトルへ戻る</button>
+        </div>
+    </div>
+
+    <!-- 問題データの読み込み -->
+    <script src="quiz_data.js"></script>
+    <script>
+        const ranks = [
+            { min: 0, max: 29, title: "足軽", msg: "まだまだこれから！近江国石田村から出直そう。" },
+            { min: 30, max: 49, title: "小姓（佐吉）", msg: "秀吉様にお茶を淹れる練習から！三献の茶を極めよう。" },
+            { min: 50, max: 69, title: "奉行衆", msg: "確かな実務能力！太閤検地や刀狩りを手伝おう。" },
+            { min: 70, max: 89, title: "佐和山城主", msg: "立派な大名クラス！島左近もあなたの知恵に感服しています。" },
+            { min: 90, max: 99, title: "五奉行筆頭", msg: "豊臣政権の要！見事な忠義と歴史知識です。" },
+            { min: 100, max: 100, title: "大一大万大吉", msg: "戦国クイズ王！その明晰な頭脳は、内府（徳川家康）も恐れる知将レベルです！" }
+        ];
+
+        let currentIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        const bgImage = document.getElementById('bgImage');
+        const seCorrect = document.getElementById('se_correct');
+        const seWrong = document.getElementById('se_wrong');
+
+        function startQuiz() {
+            document.getElementById('homeScreen').classList.remove('active');
+            document.getElementById('quizScreen').classList.add('active');
+            currentIndex = 0;
+            score = 0;
+            
+            // 初回タップ時に音声をミュート解除する（iOS制約回避）
+            seCorrect.load();
+            seWrong.load();
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            bgImage.src = 'hazku_idle.jpg';
+            
+            const q = quizData[currentIndex];
+            document.getElementById('progress').innerText = `${currentIndex + 1} / ${quizData.length}`;
+            document.getElementById('difficultyBadge').innerText = q.difficulty;
+            document.getElementById('questionText').innerText = q.question;
+            
+            const optionsArea = document.getElementById('optionsArea');
+            optionsArea.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(index, btn);
+                optionsArea.appendChild(btn);
+            });
+
+            document.getElementById('explanationArea').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if(isAnswered) return;
+            isAnswered = true;
+            
+            const q = quizData[currentIndex];
+            const buttons = document.querySelectorAll('.options .btn');
+            
+            if(selectedIndex === q.correct_index) {
+                btnElement.classList.add('correct');
+                bgImage.src = 'hazku_correct.jpg';
+                seCorrect.currentTime = 0;
+                seCorrect.play();
+                score++;
+            } else {
+                btnElement.classList.add('wrong');
+                buttons[q.correct_index].classList.add('correct');
+                bgImage.src = 'hazku_shock.jpg';
+                seWrong.currentTime = 0;
+                seWrong.play();
+            }
+
+            document.getElementById('explanationText').innerText = q.explanation;
+            document.getElementById('explanationArea').style.display = 'block';
+            document.getElementById('nextBtn').style.display = 'block';
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if(currentIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quizScreen').classList.remove('active');
+            document.getElementById('resultScreen').classList.add('active');
+            bgImage.src = 'hazku_correct.jpg';
+
+            const percent = Math.floor((score / quizData.length) * 100);
+            document.getElementById('finalScore').innerText = `${score} / ${quizData.length} 問正解 (${percent}%)`;
+            
+            let currentRank = ranks[0];
+            for(let r of ranks) {
+                if(percent >= r.min && percent <= r.max) {
+                    currentRank = r;
+                    break;
+                }
+            }
+            
+            document.getElementById('rankName').innerText = currentRank.title;
+            document.getElementById('rankMessage').innerText = currentRank.msg;
+            
+            window.shareText = `石田三成クイズで【${currentRank.title}】を獲得！\n正解率: ${percent}%\n${currentRank.msg}\n#戦国クイズ #ゆるフクロウのHazku`;
+        }
+
+        function shareLINE() {
+            const url = window.location.href;
+            const text = encodeURIComponent(window.shareText + "\n\n挑戦はこちら👇\n" + url);
+            window.open(`https://line.me/R/msg/text/?${text}`, '_blank');
+        }
+    </script>
+</body>
+</html>
