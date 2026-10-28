@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="三成クイズ">
-    <link rel="apple-touch-icon" href="icon.jpg">
+    <link rel="apple-touch-icon" href="icon.jpeg">
     <link rel="manifest" href="manifest.json">
     
     <style>
@@ -42,12 +42,12 @@
 </head>
 <body>
     <!-- 音声ファイルの読み込み -->
-    <audio id="se_correct" src="correct.mp3" preload="auto"></audio>
-    <audio id="se_wrong" src="wrong.mp3" preload="auto"></audio>
+    <audio id="se_correct" src="correct.wav" preload="auto"></audio>
+    <audio id="se_wrong" src="wrong.wav" preload="auto"></audio>
 
     <div id="app">
         <!-- 背景画像 -->
-        <img id="bgImage" class="bg-image" src="hazku_idle.jpg" alt="background">
+        <img id="bgImage" class="bg-image" src="hazku_idle.jpeg" alt="background">
         <div class="overlay"></div>
 
         <!-- ホーム画面 -->
@@ -122,7 +122,7 @@
 
         function loadQuestion() {
             isAnswered = false;
-            bgImage.src = 'hazku_idle.jpg';
+            bgImage.src = 'hazku_idle.jpeg';
             
             const q = quizData[currentIndex];
             document.getElementById('progress').innerText = `${currentIndex + 1} / ${quizData.length}`;
@@ -153,14 +153,14 @@
             
             if(selectedIndex === q.correct_index) {
                 btnElement.classList.add('correct');
-                bgImage.src = 'hazku_correct.jpg';
+                bgImage.src = 'hazku_correct.jpeg';
                 seCorrect.currentTime = 0;
                 seCorrect.play();
                 score++;
             } else {
                 btnElement.classList.add('wrong');
                 buttons[q.correct_index].classList.add('correct');
-                bgImage.src = 'hazku_shock.jpg';
+                bgImage.src = 'hazku_shock.jpeg';
                 seWrong.currentTime = 0;
                 seWrong.play();
             }
@@ -182,7 +182,7 @@
         function showResult() {
             document.getElementById('quizScreen').classList.remove('active');
             document.getElementById('resultScreen').classList.add('active');
-            bgImage.src = 'hazku_correct.jpg';
+            bgImage.src = 'hazku_correct.jpeg';
 
             const percent = Math.floor((score / quizData.length) * 100);
             document.getElementById('finalScore').innerText = `${score} / ${quizData.length} 問正解 (${percent}%)`;
