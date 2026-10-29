@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="三成クイズ">
-    <link rel="apple-touch-icon" href="icon.jpeg">
-    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="./icon.jpeg">
+    <link rel="manifest" href="./manifest.json">
     
     <style>
         body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #111; color: #fff; overflow: hidden; -webkit-user-select: none; }
@@ -41,26 +41,28 @@
     </style>
 </head>
 <body>
-    <!-- 音声ファイルの読み込み -->
-    <audio id="se_correct" src="correct.wav" preload="auto"></audio>
-    <audio id="se_wrong" src="wrong.wav" preload="auto"></audio>
+    <audio id="se_correct" src="./correct.wav" preload="auto"></audio>
+    <audio id="se_wrong" src="./wrong.wav" preload="auto"></audio>
 
     <div id="app">
-        <!-- 背景画像 -->
-        <img id="bgImage" class="bg-image" src="hazku_idle.jpeg" alt="background">
+        <img id="bgImage" class="bg-image" src="./hazku_idle.jpeg" alt="background">
         <div class="overlay"></div>
 
-        <!-- ホーム画面 -->
+        <!-- ホーム画面（難易度選択） -->
         <div id="homeScreen" class="screen active container">
             <h1>戦国武将クイズ<br>〜石田三成 激闘編〜</h1>
             <p>ナビゲーター: ゆるフクロウのHazku</p>
-            <button class="start-btn" onclick="startQuiz()">クイズを始める</button>
+            <button class="start-btn" style="background: #2a9d8f;" onclick="startQuiz('super_easy')">超初級に挑戦</button>
+            <button class="start-btn" style="background: #e9c46a; color: #222;" onclick="startQuiz('easy')">初級に挑戦</button>
+            <button class="start-btn" style="background: #f4a261;" onclick="startQuiz('medium')">中級に挑戦</button>
+            <button class="start-btn" style="background: #e63946;" onclick="startQuiz('hard')">上級に挑戦</button>
+            <button class="start-btn" style="background: #333; margin-top: 20px; border: 1px solid #fff;" onclick="startQuiz('all')">全200問シャッフル</button>
         </div>
 
         <!-- クイズ画面 -->
         <div id="quizScreen" class="screen container" style="justify-content: flex-start;">
             <div class="header">
-                <div id="progress" class="badge">1 / 20</div>
+                <div id="progress" class="badge">1 / 50</div>
                 <div id="difficultyBadge" class="badge">難易度</div>
             </div>
             <div class="question-area">
@@ -87,8 +89,12 @@
         </div>
     </div>
 
-    <!-- 問題データの読み込み -->
-    <script src="quiz_data.js"></script>
+    <!-- 難易度別のデータファイルをすべて読み込む -->
+    <script src="./quiz_super_easy.js"></script>
+    <script src="./quiz_easy.js"></script>
+    <script src="./quiz_medium.js"></script>
+    <script src="./quiz_hard.js"></script>
+
     <script>
         const ranks = [
             { min: 0, max: 29, title: "足軽", msg: "まだまだこれから！近江国石田村から出直そう。" },
@@ -99,44 +105,78 @@
             { min: 100, max: 100, title: "大一大万大吉", msg: "戦国クイズ王！その明晰な頭脳は、内府（徳川家康）も恐れる知将レベルです！" }
         ];
 
+        let activeQuizData = [];
         let currentIndex = 0;
         let score = 0;
         let isAnswered = false;
+        let currentMode = "";
 
         const bgImage = document.getElementById('bgImage');
         const seCorrect = document.getElementById('se_correct');
         const seWrong = document.getElementById('se_wrong');
 
-        function startQuiz() {
+        // 配列をシャッフルする関数
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startQuiz(mode) {
+            currentMode = mode;
+            
+            // モードに応じて読み込むデータを切り替え
+            if (mode === 'super_easy') activeQuizData = [...quizSuperEasy];
+            else if (mode === 'easy') activeQuizData = [...quizEasy];
+            else if (mode === 'medium') activeQuizData = [...quizMedium];
+            else if (mode === 'hard') activeQuizData = [...quizHard];
+            else if (mode === 'all') activeQuizData = [...quizSuperEasy, ...quizEasy, ...quizMedium, ...quizHard];
+
+            // データをシャッフル
+            activeQuizData = shuffle(activeQuizData);
+
             document.getElementById('homeScreen').classList.remove('active');
             document.getElementById('quizScreen').classList.add('active');
             currentIndex = 0;
             score = 0;
             
-            // 初回タップ時に音声をミュート解除する（iOS制約回避）
-            seCorrect.load();
-            seWrong.load();
+            // iPhone音声ロック解除
+            try {
+                seCorrect.play().catch(function(){});
+                seCorrect.pause();
+                seCorrect.currentTime = 0;
+                seWrong.play().catch(function(){});
+                seWrong.pause();
+                seWrong.currentTime = 0;
+            } catch(e) {}
             
             loadQuestion();
         }
 
         function loadQuestion() {
             isAnswered = false;
-            bgImage.src = 'hazku_idle.jpeg';
+            bgImage.src = './hazku_idle.jpeg';
             
-            const q = quizData[currentIndex];
-            document.getElementById('progress').innerText = `${currentIndex + 1} / ${quizData.length}`;
+            const q = activeQuizData[currentIndex];
+            document.getElementById('progress').innerText = `${currentIndex + 1} / ${activeQuizData.length}`;
             document.getElementById('difficultyBadge').innerText = q.difficulty;
             document.getElementById('questionText').innerText = q.question;
             
             const optionsArea = document.getElementById('optionsArea');
             optionsArea.innerHTML = '';
             
-            q.options.forEach((opt, index) => {
+            // 選択肢もシャッフルして表示（正解インデックスの追従）
+            let optionsWithIndex = q.options.map((opt, i) => ({ text: opt, originalIndex: i }));
+            optionsWithIndex = shuffle(optionsWithIndex);
+            
+            optionsWithIndex.forEach((item) => {
                 const btn = document.createElement('button');
                 btn.className = 'btn';
-                btn.innerText = opt;
-                btn.onclick = () => checkAnswer(index, btn);
+                btn.innerText = item.text;
+                // originalIndexを渡して正誤判定する
+                btn.onclick = () => checkAnswer(item.originalIndex, btn, q.correct_index, optionsWithIndex);
                 optionsArea.appendChild(btn);
             });
 
@@ -144,35 +184,38 @@
             document.getElementById('nextBtn').style.display = 'none';
         }
 
-        function checkAnswer(selectedIndex, btnElement) {
+        function checkAnswer(selectedIndex, btnElement, correctIndex, shuffledOptions) {
             if(isAnswered) return;
             isAnswered = true;
             
-            const q = quizData[currentIndex];
             const buttons = document.querySelectorAll('.options .btn');
             
-            if(selectedIndex === q.correct_index) {
+            // 正解のボタンを探す
+            let correctBtnIndex = 0;
+            shuffledOptions.forEach((item, idx) => {
+                if(item.originalIndex === correctIndex) correctBtnIndex = idx;
+            });
+            
+            if(selectedIndex === correctIndex) {
                 btnElement.classList.add('correct');
-                bgImage.src = 'hazku_correct.jpeg';
-                seCorrect.currentTime = 0;
-                seCorrect.play();
+                bgImage.src = './hazku_correct.jpeg';
+                try { seCorrect.currentTime = 0; seCorrect.play(); } catch(e) {}
                 score++;
             } else {
                 btnElement.classList.add('wrong');
-                buttons[q.correct_index].classList.add('correct');
-                bgImage.src = 'hazku_shock.jpeg';
-                seWrong.currentTime = 0;
-                seWrong.play();
+                buttons[correctBtnIndex].classList.add('correct');
+                bgImage.src = './hazku_shock.jpeg';
+                try { seWrong.currentTime = 0; seWrong.play(); } catch(e) {}
             }
 
-            document.getElementById('explanationText').innerText = q.explanation;
+            document.getElementById('explanationText').innerText = activeQuizData[currentIndex].explanation;
             document.getElementById('explanationArea').style.display = 'block';
             document.getElementById('nextBtn').style.display = 'block';
         }
 
         function nextQuestion() {
             currentIndex++;
-            if(currentIndex < quizData.length) {
+            if(currentIndex < activeQuizData.length) {
                 loadQuestion();
             } else {
                 showResult();
@@ -182,10 +225,10 @@
         function showResult() {
             document.getElementById('quizScreen').classList.remove('active');
             document.getElementById('resultScreen').classList.add('active');
-            bgImage.src = 'hazku_correct.jpeg';
+            bgImage.src = './hazku_correct.jpeg';
 
-            const percent = Math.floor((score / quizData.length) * 100);
-            document.getElementById('finalScore').innerText = `${score} / ${quizData.length} 問正解 (${percent}%)`;
+            const percent = Math.floor((score / activeQuizData.length) * 100);
+            document.getElementById('finalScore').innerText = `${score} / ${activeQuizData.length} 問正解 (${percent}%)`;
             
             let currentRank = ranks[0];
             for(let r of ranks) {
@@ -198,7 +241,11 @@
             document.getElementById('rankName').innerText = currentRank.title;
             document.getElementById('rankMessage').innerText = currentRank.msg;
             
-            window.shareText = `石田三成クイズで【${currentRank.title}】を獲得！\n正解率: ${percent}%\n${currentRank.msg}\n#戦国クイズ #ゆるフクロウのHazku`;
+            let modeText = "";
+            if (currentMode === 'all') modeText = "【全200問制覇モード】";
+            else modeText = "【" + activeQuizData[0].difficulty + "モード】";
+            
+            window.shareText = `石田三成クイズ${modeText}で『${currentRank.title}』を獲得！\n正解率: ${percent}%\n${currentRank.msg}\n#戦国クイズ #ゆるフクロウのHazku`;
         }
 
         function shareLINE() {
